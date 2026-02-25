@@ -1,0 +1,51 @@
+name: Test Action
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build action image
+        run: docker build -t swe-bench-pro-action .
+
+      - name: Verify entrypoint exists
+        run: docker run --rm --entrypoint="" swe-bench-pro-action ls -la /entrypoint.sh
+
+      - name: Verify mcpbr installed
+        run: docker run --rm --entrypoint="" swe-bench-pro-action mcpbr --version
+
+  preflight-smoke:
+    name: Preflight Smoke Test
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+
+      - name: Run preflight (1 instance)
+        id: preflight
+        uses: ./
+        with:
+          mode: preflight
+          sample-size: "1"
+          timeout: "600"
+
+      - name: Check outputs
+        run: |
+          echo "Results path: ${{ steps.preflight.outputs.results-path }}"
+          echo "Total: ${{ steps.preflight.outputs.total }}"
+          echo "Passed: ${{ steps.preflight.outputs.passed }}"
+          echo "Failed: ${{ steps.preflight.outputs.failed }}"
+          echo "Success rate: ${{ steps.preflight.outputs.success-rate }}%"

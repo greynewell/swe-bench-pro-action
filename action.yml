@@ -1,0 +1,91 @@
+name: "SWE-bench Pro Evaluation"
+description: "Run SWE-bench Pro preflight validation and agent evaluation using mcpbr"
+author: "greynewell"
+
+branding:
+  icon: "check-circle"
+  color: "blue"
+
+inputs:
+  mode:
+    description: "Operation mode: 'preflight' (validate golden patches) or 'evaluate' (run agent evaluation)"
+    required: false
+    default: "preflight"
+  benchmark:
+    description: "Benchmark name (e.g., swe-bench-pro, swe-bench-lite)"
+    required: false
+    default: "swe-bench-pro"
+  sample-size:
+    description: "Number of instances to evaluate (empty = all)"
+    required: false
+    default: ""
+  task-ids:
+    description: "Comma-separated task instance IDs to run"
+    required: false
+    default: ""
+  filter-category:
+    description: "Filter by language or repository substring"
+    required: false
+    default: ""
+  max-concurrent:
+    description: "Maximum concurrent Docker containers"
+    required: false
+    default: "2"
+  timeout:
+    description: "Per-test timeout in seconds"
+    required: false
+    default: "300"
+  fail-fast:
+    description: "Stop on first failure"
+    required: false
+    default: "false"
+  config:
+    description: "Path to mcpbr YAML config file (evaluate mode)"
+    required: false
+    default: ""
+  anthropic-api-key:
+    description: "Anthropic API key (evaluate mode)"
+    required: false
+    default: ""
+  model:
+    description: "Model override (e.g., claude-sonnet-4-5-20250514)"
+    required: false
+    default: ""
+  output-format:
+    description: "Comma-separated output formats: json, junit, markdown, html"
+    required: false
+    default: "json,junit"
+  mcpbr-version:
+    description: "mcpbr version to install (e.g., 0.14.1, or empty for latest)"
+    required: false
+    default: ""
+
+outputs:
+  results-path:
+    description: "Path to the results directory"
+  total:
+    description: "Total number of instances evaluated"
+  passed:
+    description: "Number of instances that passed"
+  failed:
+    description: "Number of instances that failed"
+  success-rate:
+    description: "Success rate as a percentage"
+
+runs:
+  using: "docker"
+  image: "Dockerfile"
+  args:
+    - ${{ inputs.mode }}
+    - ${{ inputs.benchmark }}
+    - ${{ inputs.sample-size }}
+    - ${{ inputs.task-ids }}
+    - ${{ inputs.filter-category }}
+    - ${{ inputs.max-concurrent }}
+    - ${{ inputs.timeout }}
+    - ${{ inputs.fail-fast }}
+    - ${{ inputs.config }}
+    - ${{ inputs.anthropic-api-key }}
+    - ${{ inputs.model }}
+    - ${{ inputs.output-format }}
+    - ${{ inputs.mcpbr-version }}
