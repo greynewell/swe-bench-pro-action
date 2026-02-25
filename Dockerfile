@@ -20,7 +20,7 @@ RUN apt-get update && \
 # Install mcpbr from feat/swe-bench-pro branch (has preflight command)
 # Using commit hash because pip can't checkout branch names with slashes
 # TODO: Switch to PyPI release once preflight is published
-RUN pip install --no-cache-dir "mcpbr @ git+https://github.com/greynewell/mcpbr.git@351abd4787bb53a417eb4abda7f463f1928a0a1f"
+RUN pip install --no-cache-dir "mcpbr @ git+https://github.com/greynewell/mcpbr.git@e5ccd29ca4674a1c67c91199606ae6608e7c80de"
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

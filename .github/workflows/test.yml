@@ -34,11 +34,12 @@ jobs:
         with:
           tool-cache: false
 
-      - name: Run preflight (1 instance)
+      - name: Run preflight (1 Python instance)
         id: preflight
         uses: ./
         with:
           mode: preflight
+          filter-category: python
           sample-size: "1"
           timeout: "600"
 
