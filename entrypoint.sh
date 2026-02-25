@@ -29,7 +29,7 @@ mkdir -p "$RESULTS_DIR"
 # ──────────────────────────────────────────────
 if [ -n "$MCPBR_VERSION" ]; then
     echo "::group::Installing mcpbr==${MCPBR_VERSION}"
-    pip install --no-cache-dir "mcpbr==${MCPBR_VERSION}"
+    pip install --no-cache-dir --force-reinstall "mcpbr==${MCPBR_VERSION}"
     echo "::endgroup::"
 fi
 
@@ -169,8 +169,14 @@ if [ "$MODE" = "preflight" ]; then
     # Parse preflight output from log
     if [ -f "$RESULTS_DIR/output.log" ]; then
         # Extract pass/fail counts from preflight output
-        PASSED=$(grep -c "PASS" "$RESULTS_DIR/output.log" 2>/dev/null || echo "0")
-        FAILED=$(grep -c "FAIL" "$RESULTS_DIR/output.log" 2>/dev/null || echo "0")
+        # grep -c exits 1 on no match, so use subshell to capture
+        PASSED=$(grep -c "PASS" "$RESULTS_DIR/output.log" || true)
+        FAILED=$(grep -c "FAIL" "$RESULTS_DIR/output.log" || true)
+        # Ensure numeric values (strip any whitespace)
+        PASSED="${PASSED//[^0-9]/}"
+        FAILED="${FAILED//[^0-9]/}"
+        PASSED="${PASSED:-0}"
+        FAILED="${FAILED:-0}"
         TOTAL=$((PASSED + FAILED))
         if [ "$TOTAL" -gt 0 ]; then
             RATE=$(echo "scale=1; $PASSED * 100 / $TOTAL" | bc 2>/dev/null || echo "0.0")

@@ -17,8 +17,9 @@ RUN apt-get update && \
     && apt-get install -y --no-install-recommends docker-ce-cli \
     && rm -rf /var/lib/apt/lists/*
 
-# Install mcpbr (version can be pinned at runtime via entrypoint)
-RUN pip install --no-cache-dir mcpbr
+# Install mcpbr from feat/swe-bench-pro branch (has preflight command)
+# TODO: Switch to PyPI release once preflight is published
+RUN pip install --no-cache-dir "mcpbr @ git+https://github.com/greynewell/mcpbr.git@feat/swe-bench-pro"
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
