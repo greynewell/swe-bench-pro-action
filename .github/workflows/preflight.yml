@@ -130,7 +130,7 @@ jobs:
           name: preflight-javascript
           path: swe-bench-results/
 
-  badge:
+  results:
     name: "Results"
     runs-on: ubuntu-latest
     needs: [preflight-python, preflight-go, preflight-typescript, preflight-javascript]
@@ -141,8 +141,9 @@ jobs:
         with:
           path: results/
 
-      - name: Summarize results
-        id: summary
+      - name: Summarize results and update badge
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TOTAL_PASSED=0
           TOTAL_FAILED=0
@@ -175,58 +176,59 @@ jobs:
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "**Total: ${TOTAL_PASSED}/${GRAND_TOTAL} passing**" >> "$GITHUB_STEP_SUMMARY"
 
-          # Set outputs for badge step
-          echo "passed=${TOTAL_PASSED}" >> "$GITHUB_OUTPUT"
-          echo "total=${GRAND_TOTAL}" >> "$GITHUB_OUTPUT"
-
-          # Determine badge color
+          # Determine badge color and message
           if [ "$GRAND_TOTAL" -eq 0 ]; then
-            echo "color=lightgrey" >> "$GITHUB_OUTPUT"
-            echo "message=no data" >> "$GITHUB_OUTPUT"
+            COLOR="lightgrey"
+            MESSAGE="no data"
           elif [ "$TOTAL_PASSED" -eq "$GRAND_TOTAL" ]; then
-            echo "color=brightgreen" >> "$GITHUB_OUTPUT"
-            echo "message=${TOTAL_PASSED}/${GRAND_TOTAL} passing" >> "$GITHUB_OUTPUT"
+            COLOR="brightgreen"
+            MESSAGE="${TOTAL_PASSED}/${GRAND_TOTAL} passing"
           elif [ "$TOTAL_PASSED" -gt 0 ]; then
-            echo "color=yellow" >> "$GITHUB_OUTPUT"
-            echo "message=${TOTAL_PASSED}/${GRAND_TOTAL} passing" >> "$GITHUB_OUTPUT"
+            COLOR="yellow"
+            MESSAGE="${TOTAL_PASSED}/${GRAND_TOTAL} passing"
           else
-            echo "color=red" >> "$GITHUB_OUTPUT"
-            echo "message=0/${GRAND_TOTAL} passing" >> "$GITHUB_OUTPUT"
+            COLOR="red"
+            MESSAGE="0/${GRAND_TOTAL} passing"
           fi
 
-      - name: Update badge
-        if: github.ref == 'refs/heads/main'
-        env:
-          MESSAGE: ${{ steps.summary.outputs.message }}
-          COLOR: ${{ steps.summary.outputs.color }}
-        run: |
-          # Write shields.io endpoint JSON
-          cat > preflight-badge.json << BADGE_EOF
-          {
-            "schemaVersion": 1,
-            "label": "preflight",
-            "message": "${MESSAGE}",
-            "color": "${COLOR}"
-          }
-          BADGE_EOF
+          # Write shields.io endpoint badge JSON
+          printf '{"schemaVersion":1,"label":"preflight","message":"%s","color":"%s"}\n' \
+            "$MESSAGE" "$COLOR" > preflight-badge.json
 
-          # Push to badges branch
-          git init badges-repo && cd badges-repo
-          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          cat preflight-badge.json
 
-          # Fetch existing badges branch or create orphan
-          if git fetch origin badges 2>/dev/null; then
-            git checkout badges
-          else
-            git checkout --orphan badges
-            git rm -rf . 2>/dev/null || true
+          # Push badge JSON to the badges branch
+          if [ "$GITHUB_REF" = "refs/heads/main" ]; then
+            REPO_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+            git init badges-repo
+            cd badges-repo
+            git remote add origin "$REPO_URL"
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+
+            if git fetch origin badges 2>/dev/null; then
+              git checkout badges
+            else
+              git checkout --orphan badges
+              git rm -rf . 2>/dev/null || true
+            fi
+
+            cp ../preflight-badge.json .
+            git add preflight-badge.json
+            git commit -m "preflight: ${MESSAGE}" --allow-empty
+            git push origin badges --force
+            cd ..
           fi
 
-          cp ../preflight-badge.json .
-          git add preflight-badge.json
-          git commit -m "preflight: ${MESSAGE}" --allow-empty
-          git push origin badges --force
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Fail the workflow if ANY instance failed
+          if [ "$TOTAL_FAILED" -gt 0 ]; then
+            echo "::error::${TOTAL_FAILED} preflight instance(s) failed. All ${GRAND_TOTAL} instances must pass."
+            exit 1
+          fi
+
+          if [ "$GRAND_TOTAL" -eq 0 ]; then
+            echo "::error::No preflight results found. Check that all language jobs produced output."
+            exit 1
+          fi
+
+          echo "All ${GRAND_TOTAL} instances passed preflight."
