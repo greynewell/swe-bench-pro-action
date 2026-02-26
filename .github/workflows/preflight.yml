@@ -8,7 +8,7 @@ on:
       max-concurrent:
         description: "Max concurrent Docker containers per job"
         required: false
-        default: "4"
+        default: "1"
       timeout:
         description: "Per-test timeout in seconds"
         required: false
@@ -42,7 +42,7 @@ jobs:
         with:
           mode: preflight
           filter-category: python
-          max-concurrent: ${{ inputs.max-concurrent || '4' }}
+          max-concurrent: ${{ inputs.max-concurrent || '1' }}
           timeout: ${{ inputs.timeout || '600' }}
 
       - name: Upload results
@@ -76,7 +76,7 @@ jobs:
         with:
           mode: preflight
           filter-category: go
-          max-concurrent: ${{ inputs.max-concurrent || '4' }}
+          max-concurrent: ${{ inputs.max-concurrent || '1' }}
           timeout: ${{ inputs.timeout || '600' }}
 
       - name: Upload results
@@ -110,7 +110,7 @@ jobs:
         with:
           mode: preflight
           filter-category: typescript
-          max-concurrent: ${{ inputs.max-concurrent || '4' }}
+          max-concurrent: ${{ inputs.max-concurrent || '1' }}
           timeout: ${{ inputs.timeout || '600' }}
 
       - name: Upload results
@@ -144,7 +144,7 @@ jobs:
         with:
           mode: preflight
           filter-category: javascript
-          max-concurrent: ${{ inputs.max-concurrent || '4' }}
+          max-concurrent: ${{ inputs.max-concurrent || '1' }}
           timeout: ${{ inputs.timeout || '600' }}
 
       - name: Upload results
