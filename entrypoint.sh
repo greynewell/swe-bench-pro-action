@@ -168,10 +168,11 @@ RATE="0.0"
 if [ "$MODE" = "preflight" ]; then
     # Parse preflight output from log
     if [ -f "$RESULTS_DIR/output.log" ]; then
-        # Extract pass/fail counts from preflight output
-        # grep -c exits 1 on no match, so use subshell to capture
-        PASSED=$(grep -c "PASS" "$RESULTS_DIR/output.log" || true)
-        FAILED=$(grep -c "FAIL" "$RESULTS_DIR/output.log" || true)
+        # Extract pass/fail counts from mcpbr preflight output.
+        # These patterns match mcpbr's status lines (e.g., "PASS: django__django-16046").
+        # grep -c exits 1 on no match, so || true is needed.
+        PASSED=$(grep -c "^PASS" "$RESULTS_DIR/output.log" || true)
+        FAILED=$(grep -c "^FAIL" "$RESULTS_DIR/output.log" || true)
         # Ensure numeric values (strip any whitespace)
         PASSED="${PASSED//[^0-9]/}"
         FAILED="${FAILED//[^0-9]/}"

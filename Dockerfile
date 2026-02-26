@@ -17,9 +17,9 @@ RUN apt-get update && \
     && apt-get install -y --no-install-recommends docker-ce-cli \
     && rm -rf /var/lib/apt/lists/*
 
-# Install mcpbr from feat/swe-bench-pro branch (has preflight command)
-# Using commit hash because pip can't checkout branch names with slashes
-# TODO: Switch to PyPI release once preflight is published
+# Install mcpbr from feat/swe-bench-pro branch (preflight not yet on PyPI).
+# Pinned to commit hash because pip doesn't support branch names with slashes.
+# TODO: Replace with `pip install mcpbr` once preflight ships to PyPI.
 RUN pip install --no-cache-dir "mcpbr @ git+https://github.com/greynewell/mcpbr.git@e5ccd29ca4674a1c67c91199606ae6608e7c80de"
 
 COPY entrypoint.sh /entrypoint.sh

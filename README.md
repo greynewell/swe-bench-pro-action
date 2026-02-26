@@ -1,14 +1,17 @@
 # SWE-bench Pro Evaluation Action
 
-A GitHub Action for running [SWE-bench Pro](https://github.com/greynewell/mcpbr) preflight validation and agent evaluation, powered by [mcpbr](https://pypi.org/project/mcpbr/).
+[![Test Action](https://github.com/greynewell/swe-bench-pro-action/actions/workflows/test.yml/badge.svg)](https://github.com/greynewell/swe-bench-pro-action/actions/workflows/test.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-This is the first SWE-bench evaluation action available on the GitHub Marketplace.
+A GitHub Action for running [SWE-bench Pro](https://scale.com/leaderboard/swe_bench_pro_public) preflight validation and agent evaluation, powered by [mcpbr](https://github.com/greynewell/mcpbr).
+
+[SWE-bench Pro](https://scale.com/leaderboard/swe_bench_pro_public) is Scale AI's multi-language software engineering benchmark: 1,865 task instances across 41 repositories in Python, Go, JavaScript, and TypeScript. This action lets you validate golden patches (preflight) and run agent evaluations against those instances directly in CI.
 
 ## Quick Start
 
 ### Preflight Validation
 
-Validate that golden patches pass all tests before running agent evaluations:
+Validate that golden patches pass their test suites before running agent evaluations:
 
 ```yaml
 - uses: greynewell/swe-bench-pro-action@v1
@@ -154,6 +157,13 @@ Run specific instances:
     task-ids: "django__django-16046, scikit-learn__scikit-learn-25638"
 ```
 
+## Requirements
+
+- **Runner**: `ubuntu-latest` (x86_64). ARM64 runners are not supported due to SWE-bench container compatibility.
+- **Docker**: The runner must have Docker available. GitHub-hosted runners include Docker by default.
+- **Disk space**: SWE-bench images are large. Free disk space before running (see below).
+- **API key** (evaluate mode only): An Anthropic API key passed via `secrets`.
+
 ## Disk Space
 
 SWE-bench Docker images are large. On GitHub-hosted runners, use [jlumbroso/free-disk-space](https://github.com/jlumbroso/free-disk-space) to reclaim ~30GB:
@@ -186,6 +196,10 @@ GitHub Runner (ubuntu-latest, x86_64)
 ```
 
 Running on x86_64 runners avoids ARM64/QEMU compatibility issues with Go, JavaScript, and TypeScript SWE-bench Pro instances.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, testing, and submission guidelines.
 
 ## License
 
