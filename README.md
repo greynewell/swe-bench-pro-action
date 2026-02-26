@@ -1,6 +1,7 @@
 # SWE-bench Pro Evaluation Action
 
-[![Test Action](https://github.com/greynewell/swe-bench-pro-action/actions/workflows/test.yml/badge.svg)](https://github.com/greynewell/swe-bench-pro-action/actions/workflows/test.yml)
+[![Preflight](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/greynewell/swe-bench-pro-action/badges/preflight-badge.json)](https://github.com/greynewell/swe-bench-pro-action/actions/workflows/preflight.yml)
+[![Build](https://github.com/greynewell/swe-bench-pro-action/actions/workflows/test.yml/badge.svg)](https://github.com/greynewell/swe-bench-pro-action/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 A GitHub Action for running [SWE-bench Pro](https://scale.com/leaderboard/swe_bench_pro_public) preflight validation and agent evaluation, powered by [mcpbr](https://github.com/greynewell/mcpbr).
