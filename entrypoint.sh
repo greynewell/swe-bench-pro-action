@@ -19,6 +19,8 @@ ANTHROPIC_API_KEY="${10:-}"
 MODEL="${11:-}"
 OUTPUT_FORMAT="${12:-json,junit}"
 MCPBR_VERSION="${13:-}"
+SHARD_INDEX="${14:-}"
+SHARD_TOTAL="${15:-}"
 
 # Results directory
 RESULTS_DIR="${GITHUB_WORKSPACE:-.}/swe-bench-results"
@@ -92,6 +94,10 @@ if [ "$MODE" = "preflight" ]; then
 
     if [ -n "$CONFIG" ]; then
         CMD+=(-c "$CONFIG")
+    fi
+
+    if [ -n "$SHARD_INDEX" ] && [ -n "$SHARD_TOTAL" ]; then
+        CMD+=(--shard-index "$SHARD_INDEX" --shard-total "$SHARD_TOTAL")
     fi
 
 elif [ "$MODE" = "evaluate" ]; then

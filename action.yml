@@ -59,6 +59,14 @@ inputs:
     description: "mcpbr version to install (e.g., 0.14.1, or empty for latest)"
     required: false
     default: ""
+  shard-index:
+    description: "Shard index for parallel runs (0-based)"
+    required: false
+    default: ""
+  shard-total:
+    description: "Total number of shards for parallel runs"
+    required: false
+    default: ""
 
 outputs:
   results-path:
@@ -89,3 +97,5 @@ runs:
     - ${{ inputs.model }}
     - ${{ inputs.output-format }}
     - ${{ inputs.mcpbr-version }}
+    - ${{ inputs.shard-index }}
+    - ${{ inputs.shard-total }}

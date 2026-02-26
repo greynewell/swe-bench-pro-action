@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       max-concurrent:
-        description: "Max concurrent Docker containers per job"
+        description: "Max concurrent Docker containers per shard"
         required: false
         default: "1"
       timeout:
@@ -18,78 +18,10 @@ permissions:
   contents: write
 
 jobs:
-  preflight-python:
-    name: "Python"
-    runs-on: ubuntu-latest
-    timeout-minutes: 360
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Free disk space
-        uses: jlumbroso/free-disk-space@main
-        with:
-          tool-cache: false
-
-      - name: Run preflight
-        id: preflight
-        uses: ./
-        with:
-          mode: preflight
-          filter-category: python
-          max-concurrent: ${{ inputs.max-concurrent || '1' }}
-          timeout: ${{ inputs.timeout || '600' }}
-
-      - name: Upload results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: preflight-python
-          path: swe-bench-results/
-
-  preflight-go:
-    name: "Go"
-    runs-on: ubuntu-latest
-    timeout-minutes: 360
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Free disk space
-        uses: jlumbroso/free-disk-space@main
-        with:
-          tool-cache: false
-
-      - name: Run preflight
-        id: preflight
-        uses: ./
-        with:
-          mode: preflight
-          filter-category: go
-          max-concurrent: ${{ inputs.max-concurrent || '1' }}
-          timeout: ${{ inputs.timeout || '600' }}
-
-      - name: Upload results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: preflight-go
-          path: swe-bench-results/
-
   preflight-typescript:
     name: "TypeScript"
     runs-on: ubuntu-latest
-    timeout-minutes: 360
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
 
@@ -121,9 +53,13 @@ jobs:
           path: swe-bench-results/
 
   preflight-javascript:
-    name: "JavaScript"
+    name: "JavaScript (${{ matrix.shard }})"
     runs-on: ubuntu-latest
-    timeout-minutes: 360
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
     steps:
       - uses: actions/checkout@v4
 
@@ -146,18 +82,100 @@ jobs:
           filter-category: javascript
           max-concurrent: ${{ inputs.max-concurrent || '1' }}
           timeout: ${{ inputs.timeout || '600' }}
+          shard-index: ${{ matrix.shard }}
+          shard-total: "4"
 
       - name: Upload results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: preflight-javascript
+          name: preflight-javascript-${{ matrix.shard }}
+          path: swe-bench-results/
+
+  preflight-python:
+    name: "Python (${{ matrix.shard }})"
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+
+      - name: Run preflight
+        id: preflight
+        uses: ./
+        with:
+          mode: preflight
+          filter-category: python
+          max-concurrent: ${{ inputs.max-concurrent || '1' }}
+          timeout: ${{ inputs.timeout || '600' }}
+          shard-index: ${{ matrix.shard }}
+          shard-total: "6"
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: preflight-python-${{ matrix.shard }}
+          path: swe-bench-results/
+
+  preflight-go:
+    name: "Go (${{ matrix.shard }})"
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+
+      - name: Run preflight
+        id: preflight
+        uses: ./
+        with:
+          mode: preflight
+          filter-category: go
+          max-concurrent: ${{ inputs.max-concurrent || '1' }}
+          timeout: ${{ inputs.timeout || '600' }}
+          shard-index: ${{ matrix.shard }}
+          shard-total: "6"
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: preflight-go-${{ matrix.shard }}
           path: swe-bench-results/
 
   results:
     name: "Results"
     runs-on: ubuntu-latest
-    needs: [preflight-python, preflight-go, preflight-typescript, preflight-javascript]
+    needs: [preflight-typescript, preflight-javascript, preflight-python, preflight-go]
     if: always()
     steps:
       - name: Download all artifacts
@@ -171,34 +189,38 @@ jobs:
         run: |
           TOTAL_PASSED=0
           TOTAL_FAILED=0
+          TOTAL_ERRORS=0
 
           echo "## Preflight Results" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Language | Passed | Failed | Total |" >> "$GITHUB_STEP_SUMMARY"
-          echo "|----------|--------|--------|-------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Language | Shard | Passed | Failed | Errors | Total |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|----------|-------|--------|--------|--------|-------|" >> "$GITHUB_STEP_SUMMARY"
 
-          for lang in python go typescript javascript; do
-            dir="results/preflight-${lang}"
-            if [ -d "$dir" ] && [ -f "$dir/output.log" ]; then
+          for dir in results/preflight-*/; do
+            [ -d "$dir" ] || continue
+            name="$(basename "$dir")"
+
+            if [ -f "$dir/output.log" ]; then
               passed=$(grep -c "^PASS" "$dir/output.log" 2>/dev/null || echo "0")
               failed=$(grep -c "^FAIL" "$dir/output.log" 2>/dev/null || echo "0")
-              passed="${passed//[^0-9]/}"
-              failed="${failed//[^0-9]/}"
-              passed="${passed:-0}"
-              failed="${failed:-0}"
-              total=$((passed + failed))
+              errors=$(grep -c "^ERROR" "$dir/output.log" 2>/dev/null || echo "0")
+              passed="${passed//[^0-9]/}"; passed="${passed:-0}"
+              failed="${failed//[^0-9]/}"; failed="${failed:-0}"
+              errors="${errors//[^0-9]/}"; errors="${errors:-0}"
+              total=$((passed + failed + errors))
               TOTAL_PASSED=$((TOTAL_PASSED + passed))
               TOTAL_FAILED=$((TOTAL_FAILED + failed))
-              echo "| ${lang^} | ${passed} | ${failed} | ${total} |" >> "$GITHUB_STEP_SUMMARY"
+              TOTAL_ERRORS=$((TOTAL_ERRORS + errors))
+              echo "| ${name} | | ${passed} | ${failed} | ${errors} | ${total} |" >> "$GITHUB_STEP_SUMMARY"
             else
-              echo "| ${lang^} | - | - | no results |" >> "$GITHUB_STEP_SUMMARY"
+              echo "| ${name} | | - | - | - | no results |" >> "$GITHUB_STEP_SUMMARY"
             fi
           done
 
-          GRAND_TOTAL=$((TOTAL_PASSED + TOTAL_FAILED))
+          GRAND_TOTAL=$((TOTAL_PASSED + TOTAL_FAILED + TOTAL_ERRORS))
 
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "**Total: ${TOTAL_PASSED}/${GRAND_TOTAL} passing**" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Total: ${TOTAL_PASSED}/${GRAND_TOTAL} passing, ${TOTAL_FAILED} failed, ${TOTAL_ERRORS} errors**" >> "$GITHUB_STEP_SUMMARY"
 
           # Determine badge color and message
           if [ "$GRAND_TOTAL" -eq 0 ]; then
@@ -244,9 +266,9 @@ jobs:
             cd ..
           fi
 
-          # Fail the workflow if ANY instance failed
-          if [ "$TOTAL_FAILED" -gt 0 ]; then
-            echo "::error::${TOTAL_FAILED} preflight instance(s) failed. All ${GRAND_TOTAL} instances must pass."
+          # Fail the workflow if ANY instance failed or errored
+          if [ "$TOTAL_FAILED" -gt 0 ] || [ "$TOTAL_ERRORS" -gt 0 ]; then
+            echo "::error::${TOTAL_FAILED} failed, ${TOTAL_ERRORS} errors out of ${GRAND_TOTAL} instances."
             exit 1
           fi
 
